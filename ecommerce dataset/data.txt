@@ -1,0 +1,13 @@
+import pandas as pd
+import glob
+
+# Step 1: Find the split part files
+csv_parts = sorted(glob.glob('/content/Amazon_Part_*.csv'))
+
+# Step 2: Merge them
+df_combined = pd.concat([pd.read_csv(f) for f in csv_parts], ignore_index=True)
+
+# Step 3: Save it under the original name
+df_combined.to_csv('/content/Amazon Sale Report.csv', index=False)
+
+print("✅ Combined file saved as 'Amazon Sale Report.csv'")
