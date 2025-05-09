@@ -1,93 +1,59 @@
-# Data manipulation and analysis
 import pandas as pd
 import numpy as np
-
-# Data visualization
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-# Machine learning
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error
-
-# Statistical analysis
+import os
+import glob
+import warnings
 from scipy import stats
 
-# Database management
-import sqlite3
-
-# Web development
-from flask import Flask, render_template
-
-# Other useful libraries
-import os
-import warnings
-
-# Ignore warnings
 warnings.filterwarnings('ignore')
 
-# Adjust pandas display settings
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', None)
 
 # Step 1: Find the split part files
-import glob
-csv_parts = sorted(glob.glob('/content/Amazon_Part_*.csv'))
+csv_parts = sorted(glob.glob('ecommerce datasets/Amazon_Part_*.csv'))
+
+# Debug: print found files
+print("CSV Parts found:", csv_parts)
+
+if not csv_parts:
+    raise ValueError("No CSV files found to concatenate in path 'ecommerce datasets/' with pattern 'Amazon_Part_*.csv'.")
 
 # Step 2: Merge them
 df_combined = pd.concat([pd.read_csv(f) for f in csv_parts], ignore_index=True)
 
 # Step 3: Save it under the original name
 df_combined.to_csv('ecommerce datasets/Amazon Sale Report.csv', index=False)
-print("✅ Combined file saved as 'Amazon Sale Report.csv'")
+print("✅ Combined file saved as 'ecommerce datasets/Amazon Sale Report.csv'")
 
-# Load dataset using pandas
+# Load datasets
 amazonsales_data = pd.read_csv('ecommerce datasets/Amazon Sale Report.csv')
-print(amazonsales_data.head())
-print(amazonsales_data.info())
-
 cloudwarehouse_data = pd.read_csv('ecommerce datasets/Cloud Warehouse Compersion Chart.csv')
-print(cloudwarehouse_data.head())
-print(cloudwarehouse_data.info())
-
 expenseiigf_data = pd.read_csv('ecommerce datasets/Expense IIGF.csv')
-print(expenseiigf_data.head())
-print(expenseiigf_data.info())
-
 internationalsale_data = pd.read_csv('ecommerce datasets/International sale Report.csv')
-print(internationalsale_data.head())
-print(internationalsale_data.info())
-
 may2022_data = pd.read_csv('ecommerce datasets/May-2022.csv')
-print(may2022_data.head())
-print(may2022_data.info())
-
 plmarch2021_data = pd.read_csv('ecommerce datasets/P  L March 2021.csv')
-print(plmarch2021_data.head())
-print(plmarch2021_data.info())
-
 salereport_data = pd.read_csv('ecommerce datasets/Sale Report.csv')
-print(salereport_data.head())
-print(salereport_data.info())
 
-# Concatenate CSV files into a single DataFrame
-data = pd.concat([amazonsales_data, cloudwarehouse_data, expenseiigf_data, internationalsale_data, may2022_data, plmarch2021_data, salereport_data], ignore_index=True)
-print(data.head())
+# Concatenate all datasets into one DataFrame
+data = pd.concat([
+    amazonsales_data, cloudwarehouse_data, expenseiigf_data, internationalsale_data,
+    may2022_data, plmarch2021_data, salereport_data
+], ignore_index=True)
+
+print("Combined DataFrame info:")
 print(data.info())
 
-# Save the DataFrame to a CSV file
-data.to_csv('e-commerce.csv', index=False, mode='a', header=not os.path.exists('e-commerce.csv'))
+# Save combined dataset to CSV, overwrite if file exists
+data.to_csv('e-commerce.csv', index=False)
 
-# Load the combined dataset
-ecom = pd.read_csv('e-commerce.csv')
-
-# Function to analyze a column
+# Function to analyze a single column
 def analyze_column(df, col_name):
-    description = {}
-    description['Column Name'] = col_name
-    description['Empty Rows'] = df[col_name].isnull().sum()
-    description['Data Type'] = df[col_name].dtype
+    description = {
+        'Column Name': col_name,
+        'Empty Rows': df[col_name].isnull().sum(),
+        'Data Type': df[col_name].dtype
+    }
 
     if pd.api.types.is_numeric_dtype(df[col_name]):
         description['Min'] = df[col_name].min()
@@ -103,23 +69,32 @@ def analyze_column(df, col_name):
 
     return description
 
-# Analyze each column
-column_analyses = [analyze_column(ecom, col) for col in ecom.columns]
-analysis_df = pd.DataFrame(column_analyses)
+# Analyze all columns
+def analyze_dataset(df):
+    analyses = [analyze_column(df, col) for col in df.columns]
+    return pd.DataFrame(analyses)
 
-# Function to fill missing values
+# Fill missing numeric columns with random values between IQR
 def fill_missing_with_iqr_random(df, seed=42):
     np.random.seed(seed)
     df_filled = df.copy()
-
     for col in df_filled.select_dtypes(include=[np.number]).columns:
         q1 = df_filled[col].quantile(0.25)
         q3 = df_filled[col].quantile(0.75)
         missing_mask = df_filled[col].isna()
-
         if missing_mask.any():
             df_filled.loc[missing_mask, col] = np.random.uniform(q1, q3, size=missing_mask.sum())
-
     return df_filled
 
-# Save
+# Load and preprocess function to be used by Streamlit app
+def load_and_preprocess():
+    df = pd.read_csv('e-commerce.csv')
+    df = fill_missing_with_iqr_random(df)
+    return df
+
+if __name__ == '__main__':
+    # For standalone execution and debugging
+    data = load_and_preprocess()
+    analysis = analyze_dataset(data)
+    print(analysis)
+
