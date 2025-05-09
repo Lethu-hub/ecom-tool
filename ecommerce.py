@@ -1,34 +1,38 @@
+import os
 import pandas as pd
 import numpy as np
-import os
 import glob
 import warnings
 from scipy import stats
 
+# Ensure the directory exists
+output_dir = 'ecommerce datasets'
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+
 # Step 1: Find the split part files
 csv_parts = sorted(glob.glob('ecommerce dataset/Amazon_Part_*.csv'))
-# Debug: print found files
 print("CSV Parts found:", csv_parts)
-# Check if csv_parts is empty
+
 if not csv_parts:
-    # Print the contents of the directory for debugging
     print("Files in 'ecommerce dataset':", os.listdir('ecommerce dataset'))
     raise ValueError("No CSV files found to concatenate in path 'ecommerce dataset/' with pattern 'Amazon_Part_*.csv'.")
+
 # Step 2: Merge them
 df_combined = pd.concat([pd.read_csv(f) for f in csv_parts], ignore_index=True)
 
 # Step 3: Save it under the original name
-df_combined.to_csv('ecommerce datasets/Amazon Sale Report.csv', index=False)
+df_combined.to_csv(os.path.join(output_dir, 'Amazon Sale Report.csv'), index=False)
 print("✅ Combined file saved as 'ecommerce datasets/Amazon Sale Report.csv'")
 
 # Load datasets
-amazonsales_data = pd.read_csv('ecommerce datasets/Amazon Sale Report.csv')
-cloudwarehouse_data = pd.read_csv('ecommerce datasets/Cloud Warehouse Compersion Chart.csv')
-expenseiigf_data = pd.read_csv('ecommerce datasets/Expense IIGF.csv')
-internationalsale_data = pd.read_csv('ecommerce datasets/International sale Report.csv')
-may2022_data = pd.read_csv('ecommerce datasets/May-2022.csv')
-plmarch2021_data = pd.read_csv('ecommerce datasets/P  L March 2021.csv')
-salereport_data = pd.read_csv('ecommerce datasets/Sale Report.csv')
+amazonsales_data = pd.read_csv(os.path.join(output_dir, 'Amazon Sale Report.csv'))
+cloudwarehouse_data = pd.read_csv('ecommerce dataset/Cloud Warehouse Compersion Chart.csv')
+expenseiigf_data = pd.read_csv('ecommerce dataset/Expense IIGF.csv')
+internationalsale_data = pd.read_csv('ecommerce dataset/International sale Report.csv')
+may2022_data = pd.read_csv('ecommerce dataset/May-2022.csv')
+plmarch2021_data = pd.read_csv('ecommerce dataset/P  L March 2021.csv')
+salereport_data = pd.read_csv('ecommerce dataset/Sale Report.csv')
 
 # Concatenate all datasets into one DataFrame
 data = pd.concat([
@@ -80,7 +84,6 @@ def fill_missing_with_iqr_random(df, seed=42):
         if missing_mask.any():
             df_filled.loc[missing_mask, col] = np.random.uniform(q1, q3, size=missing_mask.sum())
     return df_filled
-
 # Load and preprocess function to be used by Streamlit app
 def load_and_preprocess():
     df = pd.read_csv('e-commerce.csv')
@@ -92,4 +95,3 @@ if __name__ == '__main__':
     data = load_and_preprocess()
     analysis = analyze_dataset(data)
     print(analysis)
-
