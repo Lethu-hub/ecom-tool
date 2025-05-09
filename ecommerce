@@ -39,7 +39,7 @@ csv_parts = sorted(glob.glob('/content/Amazon_Part_*.csv'))
 df_combined = pd.concat([pd.read_csv(f) for f in csv_parts], ignore_index=True)
 
 # Step 3: Save it under the original name
-df_combined.to_csv('/content/Amazon Sale Report.csv', index=False)
+df_combined.to_csv('ecommerce datasets/Amazon Sale Report.csv', index=False)
 print("✅ Combined file saved as 'Amazon Sale Report.csv'")
 
 # Load dataset using pandas
