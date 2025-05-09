@@ -5,20 +5,15 @@ import glob
 import warnings
 from scipy import stats
 
-warnings.filterwarnings('ignore')
-
-pd.set_option('display.max_columns', None)
-pd.set_option('display.max_rows', None)
-
 # Step 1: Find the split part files
-csv_parts = sorted(glob.glob('ecommerce datasets/Amazon_Part_*.csv'))
-
+csv_parts = sorted(glob.glob('ecommerce dataset/Amazon_Part_*.csv'))
 # Debug: print found files
 print("CSV Parts found:", csv_parts)
-
+# Check if csv_parts is empty
 if not csv_parts:
-    raise ValueError("No CSV files found to concatenate in path 'ecommerce datasets/' with pattern 'Amazon_Part_*.csv'.")
-
+    # Print the contents of the directory for debugging
+    print("Files in 'ecommerce dataset':", os.listdir('ecommerce dataset'))
+    raise ValueError("No CSV files found to concatenate in path 'ecommerce dataset/' with pattern 'Amazon_Part_*.csv'.")
 # Step 2: Merge them
 df_combined = pd.concat([pd.read_csv(f) for f in csv_parts], ignore_index=True)
 
