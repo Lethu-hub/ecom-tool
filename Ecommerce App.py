@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from ecommerce.py import load_and_preprocess  # Your preprocessing function
+from ecommerce import load_and_preprocess  # Your preprocessing function
 from basic_analytics import (
     plot_sales_by_month,
     plot_qty_by_category,
