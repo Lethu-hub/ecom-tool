@@ -1,0 +1,80 @@
+# Predict Shipping Status
+
+# Import libraries
+import pandas as pd
+import xgboost as xgb
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.preprocessing import LabelEncoder
+import seaborn as sns
+
+# Load and prepare your data here
+data = pd.read_csv('train&testdata.csv')
+
+# Preview the data
+print(data.head())
+
+# Define features and target variable
+# You can adjust feature list based on available columns and importance
+features = ['Category', 'Size', 'Color', 'ship-city', 'ship-state', 'Qty', 'Month', 'Weekday']
+target = 'Status'
+
+# Convert Date to datetime and extract features if necessary
+if 'Date' in data.columns:
+    data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
+    data['Month'] = data['Date'].dt.month
+    data['Weekday'] = data['Date'].dt.weekday
+
+# Drop rows with missing target or features
+data = data.dropna(subset=features + [target])
+
+X = data[features].copy()
+y = data[target].copy()
+
+# Encode categorical features
+label_encoders = {}
+for col in X.select_dtypes(include=['object']).columns:
+    le = LabelEncoder()
+    X[col] = le.fit_transform(X[col].astype(str))
+    label_encoders[col] = le
+
+# Encode target labels
+target_le = LabelEncoder()
+y_encoded = target_le.fit_transform(y.astype(str))
+
+# Split dataset into train and test
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y_encoded, test_size=0.3, random_state=42, stratify=y_encoded)
+
+# Initialize and train XGBoost classifier
+model = xgb.XGBClassifier(
+    use_label_encoder=False,
+    eval_metric='mlogloss',
+    n_estimators=200,
+    learning_rate=0.1,
+    random_state=42
+)
+
+model.fit(X_train, y_train)
+
+# Predictions
+y_pred = model.predict(X_test)
+
+# Evaluate
+acc = accuracy_score(y_test, y_pred)
+print(f"Accuracy: {acc:.4f}")
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred, target_names=target_le.classes_))
+
+# Confusion matrix
+conf_mat = confusion_matrix(y_test, y_pred)
+plt.figure(figsize=(8,6))
+sns.heatmap(conf_mat, annot=True, fmt='d', cmap='Blues',
+            xticklabels=target_le.classes_,
+            yticklabels=target_le.classes_)
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.title("Confusion Matrix")
+plt.tight_layout()
+plt.show()
