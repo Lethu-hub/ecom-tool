@@ -1,0 +1,103 @@
+# Import necessary libraries
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, accuracy_score
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import LabelEncoder
+import statsmodels.api as sm
+import matplotlib.pyplot as plt
+
+# Load your dataset
+data = pd.read_csv('e-commerce.csv')
+
+# Sales Forecasting
+def sales_forecasting(data):
+    # Convert 'Date' to datetime
+    data['Date'] = pd.to_datetime(data['Date'])
+    data.set_index('Date', inplace=True)
+
+    # Resample to monthly sales
+    monthly_sales = data['Amount'].resample('M').sum()
+
+    # Fit a seasonal decomposition model
+    decomposition = sm.tsa.seasonal_decompose(monthly_sales, model='additive')
+    decomposition.plot()
+    plt.show()
+
+    # Train a forecasting model (e.g., Random Forest)
+    X = np.arange(len(monthly_sales)).reshape(-1, 1)
+    y = monthly_sales.values
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    model = RandomForestRegressor(n_estimators=100)
+    model.fit(X_train, y_train)
+    predictions = model.predict(X_test)
+
+    mse = mean_squared_error(y_test, predictions)
+    print(f'Sales Forecasting MSE: {mse:.2f}')
+
+# Customer Churn Prediction
+def customer_churn_prediction(data):
+    # Assume 'Status' indicates if a customer has churned
+    churn_data = data[['CustomerID', 'Status']].drop_duplicates()
+    churn_data['Churned'] = churn_data['Status'].apply(lambda x: 1 if x == 'Churned' else 0)
+
+    # Feature engineering
+    features = churn_data.groupby('CustomerID').agg({'Churned': 'max'}).reset_index()
+    features['TotalPurchases'] = data.groupby('CustomerID')['Amount'].count().values
+    features['TotalSpent'] = data.groupby('CustomerID')['Amount'].sum().values
+
+    X = features[['TotalPurchases', 'TotalSpent']]
+    y = features['Churned']
+
+    # Train a churn prediction model
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    model = RandomForestRegressor(n_estimators=100)
+    model.fit(X_train, y_train)
+    predictions = model.predict(X_test)
+
+    accuracy = accuracy_score(y_test, predictions.round())
+    print(f'Customer Churn Prediction Accuracy: {accuracy:.2f}')
+
+# Marketing Campaign Effectiveness
+def marketing_campaign_effectiveness(data):
+    # Assume 'Campaign' indicates the marketing campaign
+    campaign_data = data[['Campaign', 'Amount']].groupby('Campaign').sum().reset_index()
+
+    # Visualize campaign effectiveness
+    plt.bar(campaign_data['Campaign'], campaign_data['Amount'])
+    plt.title('Marketing Campaign Effectiveness')
+    plt.xlabel('Campaign')
+    plt.ylabel('Total Sales')
+    plt.show()
+
+# Product Demand Forecasting
+def product_demand_forecasting(data):
+    # Group by product and date
+    product_demand = data.groupby(['SKU', 'Date']).agg({'Qty': 'sum'}).reset_index()
+
+    # Train a demand forecasting model for each product
+    for sku in product_demand['SKU'].unique():
+        product_data = product_demand[product_demand['SKU'] == sku]
+        X = np.arange(len(product_data)).reshape(-1, 1)
+        y = product_data['Qty'].values
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        model = RandomForestRegressor(n_estimators=100)
+        model.fit(X_train, y_train)
+        predictions = model.predict(X_test)
+
+        mse = mean_squared_error(y_test, predictions)
+        print(f'Product Demand Forecasting MSE for {sku}: {mse:.2f}')
+
+# Customer Segmentation
+def customer_segmentation(data):
+    # Feature engineering for segmentation
+    features = data.groupby('CustomerID').agg({'Amount': 'sum', 'Qty': 'sum'}).reset_index()
+    features['Frequency'] = data.groupby('CustomerID')['OrderID'].count().values
+
+    # KMeans clustering
+    kmeans = KMeans(n_clusters=3)
+    features['
