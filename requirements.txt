@@ -1,0 +1,11 @@
+pandas
+numpy
+matplotlib
+seaborn
+scikit-learn
+scipy
+sqlite3  # built-in with Python, no need to install
+flask
+xgboost
+statsmodels
+streamlit
