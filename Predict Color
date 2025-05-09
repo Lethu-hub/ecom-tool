@@ -1,0 +1,85 @@
+# Predict Best-Selling Color
+
+# Import libraries
+import pandas as pd
+import xgboost as xgb
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.preprocessing import LabelEncoder
+import seaborn as sns
+
+# Load and prepare your data here
+data = pd.read_csv('train&testdata.csv')
+
+# Convert Date to datetime and create seasonal features if needed
+data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
+data['Month'] = data['Date'].dt.month
+
+def month_to_season(month):
+    if month in [12, 1, 2]:
+        return 'Winter'
+    elif month in [3, 4, 5]:
+        return 'Spring'
+    elif month in [6, 7, 8]:
+        return 'Summer'
+    else:
+        return 'Fall'
+
+data['Season'] = data['Month'].apply(month_to_season)
+
+# Select features and target
+features = ['Category', 'Size', 'Style', 'Season', 'Quarter', 'Year']
+target = 'Color'
+
+# Drop rows with missing essential data
+data = data.dropna(subset=features + [target])
+
+X = data[features].copy()
+y = data[target].copy()
+
+# Encode categorical features
+label_encoders = {}
+for col in X.select_dtypes(include=['object']).columns:
+    le = LabelEncoder()
+    X[col] = le.fit_transform(X[col].astype(str))
+    label_encoders[col] = le
+
+# Encode target labels
+target_le = LabelEncoder()
+y_encoded = target_le.fit_transform(y.astype(str))
+
+# Train-test split with stratification
+X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size=0.3, random_state=42, stratify=y_encoded)
+
+# Initialize XGBoost classifier
+model = xgb.XGBClassifier(
+    use_label_encoder=False,
+    eval_metric='mlogloss',
+    n_estimators=200,
+    learning_rate=0.1,
+    random_state=42
+)
+
+# Train the model
+model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test)
+
+# Evaluate model performance
+accuracy = accuracy_score(y_test, y_pred)
+print(f'Accuracy: {accuracy:.4f}')
+print('\nClassification Report:')
+print(classification_report(y_test, y_pred, target_names=target_le.classes_))
+
+# Confusion matrix visualization
+conf_mat = confusion_matrix(y_test, y_pred)
+plt.figure(figsize=(10, 7))
+sns.heatmap(conf_mat, annot=True, fmt='d', cmap='coolwarm',
+            xticklabels=target_le.classes_, yticklabels=target_le.classes_)
+plt.xlabel('Predicted Color')
+plt.ylabel('Actual Color')
+plt.title('Confusion Matrix - Best-Selling Color Prediction')
+plt.tight_layout()
+plt.show()
