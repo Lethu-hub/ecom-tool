@@ -1,0 +1,87 @@
+# Predict Best-Selling Size
+
+# Import libraries
+import pandas as pd
+import xgboost as xgb
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.preprocessing import LabelEncoder
+import seaborn as sns
+
+# Load and prepare your data here
+data = pd.read_csv('train&testdata.csv')
+
+# Preview data
+print(data.head())
+
+# Feature engineering: Extract season from month
+def month_to_season(month):
+    if month in [12, 1, 2]:
+        return 'Winter'
+    elif month in [3, 4, 5]:
+        return 'Spring'
+    elif month in [6, 7, 8]:
+        return 'Summer'
+    else:
+        return 'Fall'
+
+data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
+data['Month'] = data['Date'].dt.month
+data['Season'] = data['Month'].apply(month_to_season)
+
+# Define features and target
+features = ['Category', 'Style', 'Color', 'Season', 'Quarter', 'Year']
+target = 'Size'
+
+# Drop rows with missing in features or target
+data = data.dropna(subset=features + [target])
+
+X = data[features].copy()
+y = data[target].copy()
+
+# Encode categorical features
+label_encoders = {}
+for col in X.select_dtypes(include=['object']).columns:
+    le = LabelEncoder()
+    X[col] = le.fit_transform(X[col].astype(str))
+    label_encoders[col] = le
+
+# Encode target (Size)
+target_le = LabelEncoder()
+y_encoded = target_le.fit_transform(y.astype(str))
+
+# Split data into train-test
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y_encoded, test_size=0.3, random_state=42, stratify=y_encoded)
+
+# Train XGBoost classifier
+model = xgb.XGBClassifier(
+    use_label_encoder=False,
+    eval_metric='mlogloss',
+    n_estimators=200,
+    learning_rate=0.1,
+    random_state=42
+)
+
+model.fit(X_train, y_train)
+
+# Evaluate
+y_pred = model.predict(X_test)
+acc = accuracy_score(y_test, y_pred)
+
+print(f"Accuracy: {acc:.4f}")
+print("Classification Report:")
+print(classification_report(y_test, y_pred, target_names=target_le.classes_))
+
+# Confusion matrix plot
+conf_mat = confusion_matrix(y_test, y_pred)
+plt.figure(figsize=(8,6))
+sns.heatmap(conf_mat, annot=True, fmt='d', cmap='Greens',
+            xticklabels=target_le.classes_,
+            yticklabels=target_le.classes_)
+plt.xlabel('Predicted Size')
+plt.ylabel('Actual Size')
+plt.title('Confusion Matrix - Size Prediction')
+plt.tight_layout()
+plt.show()
